@@ -18,9 +18,26 @@ OEM cross-reference database for auto parts:
 - **Cross-references (`analogList`)** — find equivalent parts across brands by article number, with a confidence rating.
 - **Vehicle catalog (`catalogDt`)** — non-original parts lookup by vehicle make / model / modification.
 
-## Getting access
+## Try it now (demo key)
 
-API access requires an API key. Visit **[fapi.iisis.ru](https://fapi.iisis.ru)** for pricing and onboarding.
+A public demo key is rotated periodically — fetch the current value from:
+
+```
+curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
+```
+
+Pass it as the `ui` query parameter on any endpoint:
+
+```bash
+KEY=$(curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt)
+curl "https://fapi.iisis.ru/fapi/v2/analogList?ui=$KEY&n=w753"
+```
+
+The demo key has a shared daily quota — fine for evaluation, not for production load.
+
+## Getting a permanent key
+
+Production access requires a personal API key. Contact **`development.iisis@gmail.com`** or visit **[fapi.iisis.ru](https://fapi.iisis.ru)**.
 
 ## License
 

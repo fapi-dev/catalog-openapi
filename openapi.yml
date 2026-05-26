@@ -1,8 +1,23 @@
 openapi: 3.0.3
 info:
   title: FAPI Catalog API
-  description: OEM cross-reference database for auto parts. Look up parts by article number, manufacturer, vehicle applicability, and find equivalent parts across brands.
-  version: "1.0.5"
+  description: |
+    OEM cross-reference database for auto parts. Look up parts by article
+    number, manufacturer, vehicle applicability, and find equivalent parts
+    across brands.
+
+    ## Trying the API
+
+    All endpoints (except `/imageList`) require an API key passed as the
+    `ui` query parameter. For evaluation, a **public demo key** is available
+    at:
+
+    https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
+
+    The demo key is rotated periodically and shared with a daily request
+    quota. Production access requires a permanent key — contact
+    `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
+  version: "1.0.6"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -288,30 +303,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-    post:
-      tags:
-        - analogList
-      summary: Submit cross-references to the shared database
-      description: |
-        Submit one or more cross-references. Each submission automatically counts as a vote for that cross. Use the `_int` field on each row to vote on whether a cross is verified (0) or broken (1).
-      requestBody:
-        description: Cross-references to submit.
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AnalogListPost'
-      responses:
-        '200':
-          description: Data accepted and queued for insertion.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/ServerError'
 
   /catalogList/dt/manufacturerList:
     get:
@@ -616,7 +607,7 @@ components:
           description: Part description.
         sr:
           type: integer
-          description: Field present in API response; meaning not yet documented.
+          description: Aggregate confidence rating from all sources — sum of positive and negative source ratings across cross-references involving this part.
         dbi:
           type: integer
           description: Database index in FAPI.
@@ -667,10 +658,10 @@ components:
           description: "Vote marker if you have voted or submitted this cross. Values: -1 = not set; 1 = cross is BROKEN; 0 = cross is VERIFIED."
         rm:
           type: integer
-          description: Rating minus — number of votes (from participants and automated processors) marking this cross as BROKEN.
+          description: Rating minus — count of negative ratings from sources (this cross marked as BROKEN).
         rp:
           type: integer
-          description: Rating plus — number of votes (from participants and automated processors) marking this cross as VERIFIED.
+          description: Rating plus — count of positive ratings from sources (this cross marked as VERIFIED).
         pi:
           type: integer
           description: Reference to the source PART (foreign key to productList.i).
@@ -689,48 +680,6 @@ components:
         nsa:
           type: string
           description: Standardised number of the cross part.
-
-    AnalogListPost:
-      type: object
-      required:
-        - a
-      properties:
-        a:
-          type: array
-          items:
-            $ref: '#/components/schemas/AnalogListRowPost'
-
-    AnalogListRowPost:
-      type: object
-      required:
-        - mfa
-        - ns
-        - mfaa
-        - nsa
-        - _int
-      properties:
-        mfa:
-          type: string
-          description: Source brand name.
-          example: MANN
-        ns:
-          type: string
-          description: Source part article number.
-          example: w753
-        mfaa:
-          type: string
-          description: Cross brand name.
-          example: ALCO
-        nsa:
-          type: string
-          description: Cross part article number.
-          example: SP-1039
-        _int:
-          type: integer
-          description: "Vote: 0 = cross is VERIFIED; 1 = cross is BROKEN."
-          minimum: 0
-          maximum: 1
-          example: 0
 
     ParameterListResponse:
       type: object
