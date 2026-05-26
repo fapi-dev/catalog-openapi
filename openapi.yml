@@ -1,0 +1,990 @@
+openapi: 3.0.3
+info:
+  title: FAPI Catalog API
+  description: OEM cross-reference database for auto parts. Look up parts by article number, manufacturer, vehicle applicability, and find equivalent parts across brands.
+  version: "1.0.4"
+  contact:
+    email: development.iisis@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://fapi.iisis.ru/fapi/v2
+    description: Production
+
+tags:
+  - name: manufacturerList
+    description: Manufacturers (brands).
+  - name: productList
+    description: Parts, attributes, vehicle applicability, images, and search helpers.
+  - name: analogList
+    description: Cross-references (analogs / equivalent parts).
+  - name: catalogDt
+    description: Lookup against the non-original parts catalog (by vehicle make / model / modification / node).
+
+paths:
+  /imageList:
+    get:
+      tags:
+        - productList
+      summary: Get part image
+      description: "Use the dedicated image server for image requests: https://static.fapi.iisis.ru/fapi/v2/imageList"
+      parameters:
+        - in: query
+          name: mfi
+          description: Manufacturer index.
+          required: true
+          schema:
+            type: integer
+            default: 13007
+        - in: query
+          name: n
+          description: Part article number.
+          required: true
+          schema:
+            type: string
+            default: "10100"
+        - in: query
+          name: imgd
+          description: "Image Default. If the part photo is not found: true returns a default placeholder image, false returns 404. If omitted, a default photo is returned."
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - in: query
+          name: width
+          description: Output image width in pixels.
+          required: false
+          schema:
+            type: integer
+            default: 200
+      responses:
+        '200':
+          description: Image (JPEG format).
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+
+  /manufacturerList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - manufacturerList
+      summary: Get manufacturer list
+      description: Returns the full list of manufacturers (brands). Use this to cache manufacturer indexes (dbi) on your side; the dbi is the key needed by all other endpoints.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManufacturerList'
+        '400':
+          description: Invalid request parameters.
+
+  /productList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - productList
+      summary: Get parts by article number
+      description: Returns parts matching the given article number, optionally as a prefix search.
+      parameters:
+        - in: query
+          name: n
+          description: Part article number, or the beginning of one.
+          required: true
+          schema:
+            type: string
+            default: A00742
+        - in: query
+          name: comparison
+          description: If set, treat `n` as a prefix / pattern for article-number search.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /productNumberList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - productList
+      summary: Get matching article numbers
+      description: Returns the list of article numbers matching the given prefix. Useful for autocomplete and search suggestions.
+      parameters:
+        - in: query
+          name: n
+          description: Part article number, or the beginning of one.
+          required: true
+          schema:
+            type: string
+            default: A00742
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /productParameterList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - productList
+      summary: Get part attributes
+      description: Returns additional technical attributes (key/value pairs) for a specific part.
+      parameters:
+        - in: query
+          name: n
+          description: Part article number.
+          required: true
+          schema:
+            type: string
+            default: "10100"
+        - in: query
+          name: mfi
+          description: Manufacturer (brand) index.
+          required: true
+          schema:
+            type: integer
+            default: 13007
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParameterListRow'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /productApplicabilityList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - productList
+      summary: Look up vehicle applicability for a part
+      description: Returns the list of vehicle models and modifications a given part fits.
+      parameters:
+        - in: query
+          name: mfi
+          description: Manufacturer (brand) index.
+          required: true
+          schema:
+            type: integer
+            default: 12738
+        - in: query
+          name: n
+          description: Part article number.
+          required: true
+          schema:
+            type: string
+            default: "AG+251"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarListV2'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /analogList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - analogList
+      summary: Get cross-references for a part
+      description: Returns equivalent (analog) parts across other manufacturers for the given article number.
+      parameters:
+        - in: query
+          name: n
+          description: Part article number.
+          required: true
+          schema:
+            type: string
+            default: A0074207920
+        - in: query
+          name: mfi
+          description: Manufacturer (brand) index. Optional — if omitted, results are not narrowed to a single brand.
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: r
+          description: Filter results by minimum cross-reference confidence rating. Higher values return fewer but more verified crosses. Useful for end-customer-facing applications (use 2+); leave at 0 for sales-tool use cases where breadth matters more than precision.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: o
+          description: |
+            Additional filter mode:
+              * `NOT_USE` — no additional filter.
+              * `ONLY_OWN` — return only crosses you yourself marked (correct or broken); ignores the rating filter.
+              * `CORRECT_AR` — return only crosses you marked as correct, combined with the rating filter; an analog explicitly marked correct is included even if its rating is below the threshold.
+          required: false
+          schema:
+            type: string
+            enum:
+              - NOT_USE
+              - ONLY_OWN
+              - CORRECT_AR
+            default: NOT_USE
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalogListV2'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+    post:
+      security:
+        - api_key: []
+      tags:
+        - analogList
+      summary: Submit cross-references to the shared database
+      description: 'Submit one or more cross-references to the shared database. Submitting a cross also counts as a vote on it. Use this endpoint to vote a cross as broken as well (set `_int`: 0 = correct, 1 = broken).'
+      parameters:
+        - in: query
+          name: ui
+          description: API key (user identifier).
+          required: true
+          schema:
+            type: string
+            default: 6c4a4367-c7b0-4263-ae20-0038273ab2e7
+      requestBody:
+        description: Cross-references to add.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalogListPost'
+      responses:
+        '200':
+          description: Submitted and queued for processing.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '500':
+          description: Server-side write access unavailable.
+
+  /catalogList/dt/manufacturerList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - catalogDt
+      summary: Get vehicle-make list (non-original catalog)
+      description: Returns the list of vehicle manufacturers. Typically used to populate a make picker.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManufacturerList'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /catalogList/dt/modelList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - catalogDt
+      summary: Get model list for a vehicle make
+      description: Returns the list of vehicle models for the selected manufacturer.
+      parameters:
+        - in: query
+          name: mfi
+          description: Manufacturer index.
+          required: true
+          schema:
+            type: integer
+            default: 111
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelList'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /catalogList/dt/modificationList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - catalogDt
+      summary: Get modification list for a model
+      description: Returns the list of modifications (engine / body / drivetrain variants) for the selected vehicle model.
+      parameters:
+        - in: query
+          name: mi
+          description: Model identifier (dbi).
+          required: true
+          schema:
+            type: integer
+            default: 4846
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModificationList'
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /catalogList/dt/treeList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - catalogDt
+      summary: Get part-group tree for a modification
+      description: Returns the hierarchical tree of part groups (nodes) for the selected vehicle modification.
+      parameters:
+        - in: query
+          name: mi
+          description: Modification identifier (dbi).
+          required: true
+          schema:
+            type: integer
+            default: 124170
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /catalogList/dt/productList:
+    get:
+      security:
+        - api_key: []
+      tags:
+        - catalogDt
+      summary: Get parts in a node
+      description: Returns the list of parts belonging to the given part group (node) for the given vehicle modification.
+      parameters:
+        - in: query
+          name: nodei
+          description: Node identifier (dbi).
+          required: true
+          schema:
+            type: integer
+            default: 100259
+        - in: query
+          name: modi
+          description: Modification identifier (dbi).
+          required: true
+          schema:
+            type: integer
+            default: 124170
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '401':
+          description: 'Authentication failed: invalid API key.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: 'Access denied: API key blocked due to abuse or terms violation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: ui
+      in: query
+
+  schemas:
+    AnalogListV2:
+      type: object
+      required:
+        - manufacturerList
+        - productList
+        - analogList
+      properties:
+        manufacturerList:
+          $ref: '#/components/schemas/ManufacturerList'
+        productList:
+          $ref: '#/components/schemas/ProductList'
+        analogList:
+          $ref: '#/components/schemas/AnalogList'
+
+    ManufacturerList:
+      type: object
+      description: Shared brand (manufacturer) table.
+      required:
+        - mf
+      properties:
+        mf:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManufacturerListRow'
+
+    ManufacturerListRow:
+      type: object
+      required:
+        - i
+        - ds
+        - da
+        - dbi
+      properties:
+        i:
+          type: integer
+          description: Index.
+          example: 193
+        ds:
+          type: string
+          description: Description Standard — brand name in uppercase.
+          example: "TOYOTA"
+        da:
+          type: string
+          description: Description Adapted — brand name in uppercase with special characters stripped.
+          example: "TOYOTA"
+        dbi:
+          type: integer
+          description: FAPI database index for this brand. Use this value when calling other endpoints.
+          example: 111
+
+    ProductList:
+      type: object
+      description: Shared parts table.
+      required:
+        - p
+      properties:
+        p:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductListRow'
+
+    ProductListRow:
+      type: object
+      required:
+        - i
+        - mfi
+        - ns
+        - n
+        - d
+        - dbi
+      properties:
+        i:
+          type: integer
+          description: Index.
+        mfi:
+          type: integer
+          description: Manufacturer index — foreign key to ManufacturerListRow.i.
+        ns:
+          type: string
+          description: Number Standard — normalized article number with special characters stripped.
+        n:
+          type: string
+          description: Article number as published by the manufacturer.
+        d:
+          type: string
+          description: Part description.
+        dbi:
+          type: integer
+          description: FAPI database index for this part.
+
+    AnalogList:
+      type: object
+      description: Cross-reference table — defines the equivalence links between parts.
+      required:
+        - a
+      properties:
+        a:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalogListRow'
+
+    AnalogListRow:
+      type: object
+      required:
+        - i
+        - _int
+        - rm
+        - rp
+        - pi
+        - mfi
+        - ns
+        - pai
+        - mfai
+        - nsa
+      properties:
+        i:
+          type: integer
+          description: Index.
+        pri:
+          type: integer
+          description: Not used.
+        si:
+          type: integer
+          description: Not used.
+        di:
+          type: integer
+          description: Not used.
+        _int:
+          type: integer
+          description: 'Your own vote on this cross, if any. -1 = not set; 1 = marked BROKEN; 0 = marked CORRECT.'
+        rm:
+          type: integer
+          description: Rating minus — number of votes (from users and automated checks) marking this cross as BROKEN.
+        rp:
+          type: integer
+          description: Rating plus — number of votes (from users and automated checks) marking this cross as CORRECT.
+        pi:
+          type: integer
+          description: Reference to the source PART — foreign key to ProductList.i.
+        mfi:
+          type: integer
+          description: Manufacturer index — reference to the source part's BRAND, foreign key to ManufacturerList.i.
+        ns:
+          type: string
+          description: Normalized article number of the source part.
+        pai:
+          type: integer
+          description: Reference to the ANALOG part — foreign key to ProductList.i.
+        mfai:
+          type: integer
+          description: Manufacturer analog index — reference to the analog part's BRAND, foreign key to ManufacturerList.i.
+        nsa:
+          type: string
+          description: Normalized article number of the analog part.
+
+    AnalogListPost:
+      type: object
+      required:
+        - a
+      properties:
+        a:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalogListRowPost'
+
+    AnalogListRowPost:
+      type: object
+      required:
+        - mfa
+        - ns
+        - mfaa
+        - nsa
+        - _int
+      properties:
+        mfa:
+          type: string
+          description: Source part brand name.
+          example: "MANN"
+        ns:
+          type: string
+          description: Source part article number.
+          example: "w753"
+        mfaa:
+          type: string
+          description: Analog part brand name.
+          example: "ALCO"
+        nsa:
+          type: string
+          description: Analog part article number.
+          example: "SP-1039"
+        _int:
+          type: integer
+          description: Vote on this cross. 0 = correct, 1 = broken.
+          example: 0
+          minimum: 0
+          maximum: 1
+
+    ParameterListRow:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          example: "Weight, g"
+        value:
+          type: string
+          example: "4210"
+
+    CarListV2:
+      type: object
+      required:
+        - manufacturerList
+        - modelList
+        - modificationList
+      properties:
+        manufacturerList:
+          $ref: '#/components/schemas/ManufacturerList'
+        modelList:
+          $ref: '#/components/schemas/ModelList'
+        modificationList:
+          $ref: '#/components/schemas/ModificationList'
+
+    ModelList:
+      type: object
+      required:
+        - m
+      properties:
+        m:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelListRow'
+
+    ModelListRow:
+      type: object
+      required:
+        - i
+        - dbi
+        - mfi
+        - d
+        - fd
+        - cb
+        - ce
+      properties:
+        i:
+          type: integer
+          description: Index.
+          example: 4846
+        dbi:
+          type: integer
+          description: FAPI database index for this model.
+          example: 4846
+        mfi:
+          type: integer
+          description: Manufacturer index — foreign key to ManufacturerList.i.
+          example: 111
+        d:
+          type: string
+          description: Short description.
+          example: "CAMRY sedan (_V3_)"
+        fd:
+          type: string
+          description: Full description (brand + model).
+          example: "TOYOTA CAMRY sedan (_V3_)"
+        cb:
+          type: integer
+          description: Production start date (unix time, milliseconds).
+          example: 996624000000
+        ce:
+          type: integer
+          description: Production end date (unix time, milliseconds).
+          example: 1162339200000
+
+    ModificationList:
+      type: object
+      required:
+        - m
+      properties:
+        m:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModificationListRow'
+
+    ModificationListRow:
+      type: object
+      required:
+        - i
+        - dbi
+        - mdi
+        - d
+        - fd
+        - cb
+        - ce
+        - engineType
+        - engineCode
+        - power
+        - capacity
+        - driveType
+        - bodyType
+        - p
+      properties:
+        i:
+          type: integer
+          description: Index.
+          example: 9
+        dbi:
+          type: integer
+          description: FAPI database index for this modification.
+          example: 124170
+        mdi:
+          type: integer
+          description: Model index — foreign key to Model.i.
+          example: 4846
+        d:
+          type: string
+          description: Short description.
+          example: "2.4 (ACV30)"
+        fd:
+          type: string
+          description: Full description (brand + model + modification).
+          example: "TOYOTA CAMRY sedan (_V3_) 2.4 (ACV30)"
+        cb:
+          type: integer
+          description: Production start date (unix time, milliseconds).
+          example: 999302400000
+        ce:
+          type: integer
+          description: Production end date (unix time, milliseconds).
+          example: 1136073600000
+        engineType:
+          type: string
+          description: Engine type.
+          example: "Petrol engine"
+        engineCode:
+          type: string
+          description: Engine code.
+          example: "2AZ-FE"
+        power:
+          type: string
+          description: Power output (hp).
+          example: "117"
+        capacity:
+          type: string
+          description: Engine displacement.
+          example: "2.4 l"
+        driveType:
+          type: string
+          description: Drivetrain type.
+          example: "Front-wheel drive"
+        bodyType:
+          type: string
+          description: Body type.
+          example: "sedan"
+        p:
+          type: object
+          required:
+            - p
+          properties:
+            p:
+              type: array
+              items:
+                $ref: '#/components/schemas/ParameterListRow'
+
+    MessageList:
+      type: object
+      required:
+        - m
+      properties:
+        m:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageListRow'
+
+    MessageListRow:
+      type: object
+      required:
+        - i
+        - l
+        - d
+      properties:
+        i:
+          type: integer
+          description: Message index.
+        l:
+          type: integer
+          description: Severity level.
+        d:
+          type: string
+          description: Message text.
+          example: "Message text"
