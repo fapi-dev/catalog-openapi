@@ -28,7 +28,7 @@ info:
     The demo key is shared and rotated periodically — fine for evaluation, not
     for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "1.2.0"
+  version: "2.0.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -583,7 +583,7 @@ paths:
         Decodes a VIN into one vehicle. The answer is the VIN decoder's own,
         relayed unchanged: its fields are listed below as they are today, and
         the decoder may add fields at any time — ignore the ones you do not
-        know. `tecdoc_type_id` goes straight into `/productApplicabilityList`
+        know. `dt_type_id` goes straight into `/productApplicabilityList`
         and `/catalogList/dt/*`. `confidence` says how deep the vehicle was
         identified; a VIN nothing is known about is still a 200.
 
@@ -593,7 +593,7 @@ paths:
         (`unknown_key`, `key_expired`, `identity_unavailable`). Decoding may
         also be refused over your account's balance there rather than your
         key — see the `402` and `503` responses below — and never billed
-        when it is: see `GET /vin/balance`.
+        when it is: `vin` in `GET /usage` shows that balance.
       parameters:
         - in: query
           name: vin
@@ -652,63 +652,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageList'
 
-  /vin/balance:
-    get:
-      tags:
-        - catalogDt
-      summary: Read your VIN-decoding balance
-      description: |
-        Your prepaid balance for VIN decoding, read at the VIN decoder itself. Never charged,
-        and answered even at zero — read it any time to see what is left. `lots` are the live
-        credits behind the total, in the order they will be spent; a lot that never expires
-        carries `expires_at: null`. Money is integer kopecks throughout.
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VinBalanceResponse'
-        '400':
-          description: VIN decoding is not configured on this host. Empty body.
-        '401':
-          description: No key, an expired key, or `i=15` — the VIN decoder refused the key as expired.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageList'
-        '403':
-          description: The key was refused (see `Forbidden`), or `i=15` — the key does not open VIN decoding.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageList'
-        '500':
-          description: The VIN decoder did not answer. Empty body.
-        '503':
-          description: |
-            The key could not be checked right now, here (`i=13`) or by the
-            VIN decoder (`i=15`); or the VIN decoder's own balance check
-            (not your key) is down (`i=15`, code `balance_unavailable`).
-            Repeat after `Retry-After`.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageList'
-
   /usage:
     get:
       tags:
         - account
-      summary: Read your own plan, usage and balance
+      summary: Read your own plan, usage and balances
       description: |
         Your own billing position, read from the billing gate's in-process snapshot: never a
         database read on this call, and never older than `ts`. Balance only for now — usage
         history is planned as a later addition to this same route.
+
+        Next to it, `vin` is your prepaid balance for VIN decoding (`GET /vin`), read at the
+        VIN decoder with your key on every call. When the decoder gives no balance, `vin.st`
+        says why and the account is answered all the same: `no_access` — your key does not
+        open VIN decoding; `unavailable` — the decoder could not be read in time, ask again
+        later.
 
         Free and never gated: even a request that would be refused for non-payment on every
         other route still gets a `200` here, never a `402` — `st` and `d` say exactly what a
@@ -1440,21 +1398,21 @@ components:
         interior_color:
           type: string
           description: The maker's interior trim code, as is.
-        tecdoc_manufacturer_id:
+        dt_manufacturer_id:
           type: integer
           description: Catalog manufacturer id; absent when not matched.
           example: 121
-        tecdoc_model_id:
+        dt_model_id:
           type: integer
           description: Catalog model id; absent when not matched.
           example: 7873
-        tecdoc_type_id:
+        dt_type_id:
           type: integer
           description: |
             Catalog modification key; absent when not matched. Pass it to
             `/productApplicabilityList` and `/catalogList/dt/*`.
           example: 29992
-        tecdoc_card:
+        dt_card:
           $ref: '#/components/schemas/VinCatalogCard'
         confidence:
           type: string
@@ -1542,13 +1500,23 @@ components:
               type: string
               example: CAXA
 
-    VinBalanceResponse:
+    UsageVin:
       type: object
-      description: The caller's own prepaid balance for VIN decoding, as the VIN decoder reports it.
+      description: |
+        Your own prepaid balance for VIN decoding, as the VIN decoder reports it. Never
+        charged, and answered even at zero. `balance_kopecks` and `lots` are present exactly
+        when `st` is `ok`. Money is integer kopecks throughout. The whole object is absent
+        when this host does not decode VINs.
       required:
-        - balance_kopecks
-        - lots
+        - st
       properties:
+        st:
+          type: string
+          enum: [ok, no_access, unavailable]
+          description: |
+            `ok` — the balance follows; `no_access` — your key does not open VIN decoding;
+            `unavailable` — the VIN decoder could not be read in time, ask again later.
+          example: ok
         balance_kopecks:
           type: integer
           format: int64
@@ -1589,6 +1557,8 @@ components:
       properties:
         account:
           $ref: '#/components/schemas/UsageAccount'
+        vin:
+          $ref: '#/components/schemas/UsageVin'
 
     UsageAccount:
       type: object
