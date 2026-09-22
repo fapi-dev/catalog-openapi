@@ -16,7 +16,8 @@ OEM cross-reference database for auto parts:
 - **Manufacturers** — index of parts brands.
 - **Products** — look up parts by article number; get attributes, applicability, images.
 - **Cross-references (`analogList`)** — find equivalent parts across brands by article number, with a confidence rating.
-- **Vehicle catalog (`catalogDt`)** — non-original parts lookup by vehicle make / model / modification.
+- **Vehicle catalog (`catalogDt`)** — parts lookup by vehicle make / model / modification / node: aftermarket parts (`productList`) and the maker's original numbers (`productListOEM`).
+- **VIN (`vin`)** — identify a vehicle by VIN and continue in the vehicle catalog with the modification it resolved to.
 
 ## Try it now (demo key)
 
@@ -26,18 +27,27 @@ A public demo key is rotated periodically — fetch the current value from:
 curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
 ```
 
-Pass it as the `ui` query parameter on any endpoint:
+Send it in the `Authorization` header on any endpoint:
 
 ```bash
 KEY=$(curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt)
-curl "https://fapi.iisis.ru/fapi/v2/analogList?ui=$KEY&n=w753"
+curl -H "Authorization: Bearer $KEY" "https://fapi.iisis.ru/fapi/v2/analogList?n=w753"
 ```
 
-The demo key has a shared daily quota — fine for evaluation, not for production load.
+The demo key is shared and rotated periodically — fine for evaluation, not for production load.
 
 ## Getting a permanent key
 
 Production access requires a personal API key. Contact **`development.iisis@gmail.com`** or visit **[fapi.iisis.ru](https://fapi.iisis.ru)**.
+
+A personal key goes in the same `Authorization: Bearer` header. Never put a key in a URL — URLs
+end up in access logs and proxies.
+
+## About this repository
+
+This repository is a publication target: the spec is maintained together with the API itself and
+copied here on release. Changes made here directly are overwritten by the next release — to report
+a mistake in the spec, open an issue.
 
 ## License
 

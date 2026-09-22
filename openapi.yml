@@ -6,18 +6,29 @@ info:
     number, manufacturer, vehicle applicability, and find equivalent parts
     across brands.
 
+    ## Authorization
+
+    Every endpoint except `/imageList` requires an API key in the
+    `Authorization` header:
+
+    ```
+    Authorization: Bearer <key>
+    ```
+
+    A key never belongs in a URL: URLs reach access logs, browser history and
+    every proxy on the way. A refusal carries a `MessageList` whose `i` tells
+    which check refused (see the 401, 403 and 503 responses).
+
     ## Trying the API
 
-    All endpoints (except `/imageList`) require an API key passed as the
-    `ui` query parameter. For evaluation, a **public demo key** is available
-    at:
+    For evaluation, a **public demo key** is available at:
 
     https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
 
-    The demo key is rotated periodically and shared with a daily request
-    quota. Production access requires a permanent key — contact
+    The demo key is shared and rotated periodically — fine for evaluation, not
+    for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "1.0.6"
+  version: "1.2.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -37,9 +48,11 @@ tags:
     description: Cross-references (analogs / equivalent parts).
   - name: catalogDt
     description: Lookup against the non-original parts catalog (by vehicle make / model / modification / node).
+  - name: account
+    description: Your own account — plan, usage and balance.
 
 security:
-  - api_key: []
+  - bearer: []
 
 paths:
   /imageList:
@@ -111,8 +124,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /productList:
     get:
@@ -145,8 +162,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /productNumberList:
     get:
@@ -175,8 +196,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /productParameterList:
     get:
@@ -210,8 +235,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /productApplicabilityList:
     get:
@@ -245,8 +274,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /analogList:
     get:
@@ -301,8 +334,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /catalogList/dt/manufacturerList:
     get:
@@ -321,8 +358,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /catalogList/dt/modelList:
     get:
@@ -349,8 +390,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /catalogList/dt/modificationList:
     get:
@@ -377,8 +422,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /catalogList/dt/treeList:
     get:
@@ -407,8 +456,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /catalogList/dt/productList:
     get:
@@ -444,15 +497,254 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /catalogList/dt/productListOEM:
+    get:
+      tags:
+        - catalogDt
+      summary: Original (OE) numbers for a catalog node
+      description: |
+        The vehicle maker's original numbers for a (node, modification) pair —
+        the counterpart of `/catalogList/dt/productList`, which returns the
+        aftermarket parts for the same pair. Rows are not ranked: they come by
+        brand, then by number. Match on `ns`; the spelling in `n` comes from the
+        source and may differ between answers. `[]` means the node has no
+        originals — a normal answer. Send `Accept-Encoding: gzip`: answers reach
+        hundreds of kilobytes and compress about eightfold.
+      parameters:
+        - in: query
+          name: modi
+          description: Modification identifier — `dbi` from `/catalogList/dt/modificationList`.
+          required: true
+          schema:
+            type: integer
+            default: 137147
+        - in: query
+          name: nodei
+          description: Node identifier — `i` from `/catalogList/dt/treeList`.
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: family
+          description: |
+            `1` adds the numbers of the maker's platform relatives (Vauxhall →
+            Opel and General Motors, Mini → BMW, Infiniti → Nissan). The relation
+            is directed: Opel does not get Vauxhall's numbers. Only `0` or `1`;
+            anything else is a 400.
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 0
+        - in: query
+          name: strict
+          description: |
+            `1` drops numbers the market files under another brand or as another
+            part; `0` returns the full list, source errors included. Only `0` or
+            `1`; anything else is a 400.
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 1
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OemRow'
+        '400':
+          description: "`modi` or `nodei` missing or not a number, or `family` / `strict` not `0` or `1`. Empty body."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /vin:
+    get:
+      tags:
+        - catalogDt
+      summary: Identify a vehicle by VIN
+      description: |
+        Decodes a VIN into one vehicle. The answer is the VIN decoder's own,
+        relayed unchanged: its fields are listed below as they are today, and
+        the decoder may add fields at any time — ignore the ones you do not
+        know. `tecdoc_type_id` goes straight into `/productApplicabilityList`
+        and `/catalogList/dt/*`. `confidence` says how deep the vehicle was
+        identified; a VIN nothing is known about is still a 200.
+
+        Your key must open VIN decoding as well as this API: it is presented
+        to the VIN decoder on your behalf, and decoding is billed to you there.
+        A key that does not is refused with `i=15` and the decoder's own code
+        (`unknown_key`, `key_expired`, `identity_unavailable`). Decoding may
+        also be refused over your account's balance there rather than your
+        key — see the `402` and `503` responses below — and never billed
+        when it is: see `GET /vin/balance`.
+      parameters:
+        - in: query
+          name: vin
+          description: 17-character VIN (ISO 3779 — digits and Latin letters except I, O, Q; case-insensitive). Checked by the VIN decoder; anything else is a 400.
+          required: true
+          schema:
+            type: string
+            minLength: 17
+            maxLength: 17
+            default: XWF0AHL30D0011102
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VinResponse'
+        '400':
+          description: VIN missing or not ISO 3779, or VIN decoding is not configured on this host. Empty body.
+        '401':
+          description: No key, an expired key, or `i=15` — the VIN decoder refused the key as expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: The key was refused (see `Forbidden`), or `i=15` — the key does not open VIN decoding.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '402':
+          description: |
+            Your account's prepaid balance for VIN decoding is exhausted
+            (`i=15`, code `balance_exhausted`). Top up the balance —
+            retrying will not help. Not charged: a 402 is refused before
+            decoding runs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '500':
+          description: The VIN decoder did not answer. Empty body.
+        '503':
+          description: |
+            The key could not be checked right now, here (`i=13`) or by the
+            VIN decoder (`i=15`); or the VIN decoder's own balance check is
+            down (`i=15`, code `balance_unavailable`, unrelated to your key).
+            Repeat after `Retry-After`.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /vin/balance:
+    get:
+      tags:
+        - catalogDt
+      summary: Read your VIN-decoding balance
+      description: |
+        Your prepaid balance for VIN decoding, read at the VIN decoder itself. Never charged,
+        and answered even at zero — read it any time to see what is left. `lots` are the live
+        credits behind the total, in the order they will be spent; a lot that never expires
+        carries `expires_at: null`. Money is integer kopecks throughout.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VinBalanceResponse'
+        '400':
+          description: VIN decoding is not configured on this host. Empty body.
+        '401':
+          description: No key, an expired key, or `i=15` — the VIN decoder refused the key as expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '403':
+          description: The key was refused (see `Forbidden`), or `i=15` — the key does not open VIN decoding.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '500':
+          description: The VIN decoder did not answer. Empty body.
+        '503':
+          description: |
+            The key could not be checked right now, here (`i=13`) or by the
+            VIN decoder (`i=15`); or the VIN decoder's own balance check
+            (not your key) is down (`i=15`, code `balance_unavailable`).
+            Repeat after `Retry-After`.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+
+  /usage:
+    get:
+      tags:
+        - account
+      summary: Read your own plan, usage and balance
+      description: |
+        Your own billing position, read from the billing gate's in-process snapshot: never a
+        database read on this call, and never older than `ts`. Balance only for now — usage
+        history is planned as a later addition to this same route.
+
+        Free and never gated: even a request that would be refused for non-payment on every
+        other route still gets a `200` here, never a `402` — `st` and `d` say exactly what a
+        request elsewhere would be refused with right now, in the same words. The partner
+        comes only from your key; no parameter can name another one.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: |
+            Could not answer right now: the key could not be checked (`i=13`), or usage data
+            is temporarily unavailable (`i=20`) — billing is off on this node, or its snapshot
+            has never loaded. Repeat after `Retry-After`.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
 
 components:
   securitySchemes:
-    api_key:
-      type: apiKey
-      name: ui
-      in: query
+    bearer:
+      type: http
+      scheme: bearer
+      description: The API key issued to you, in the `Authorization` header.
 
   responses:
     BadRequest:
@@ -462,13 +754,44 @@ components:
           schema:
             $ref: '#/components/schemas/MessageList'
     Unauthorized:
-      description: "Authentication failed: invalid API key."
+      description: |
+        No key was sent, or `i=12` the key has expired (sent with
+        `WWW-Authenticate`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageList'
+    PaymentRequired:
+      description: |
+        Your account cannot pay for this request: `i=16` the current period's
+        subscription fee is not paid, `i=17` the request package is spent and
+        your plan sells no overage, `i=18` the package is spent and your
+        balance is too. The message text says which and links the payment
+        page. A 402 is never cleared by retrying: top up (`16`, `18`) or
+        change plan (`17`), then send the request again — `GET /usage` shows
+        the same verdict and text beforehand, and confirms once you have paid.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/MessageList'
     Forbidden:
-      description: "Access denied: API key blocked due to abuse or terms violation."
+      description: |
+        Access denied: `i=10` key was not found — 403 rather than 401, because
+        a key unknown to this product may be valid for another one; `i=11`
+        access status = 0.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageList'
+    ServiceUnavailable:
+      description: |
+        `i=13` identity service is unavailable. The service could not check
+        the key right now; it does not mean the key is wrong.
+        Repeat after `Retry-After`.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
       content:
         application/json:
           schema:
@@ -551,7 +874,10 @@ components:
 
     AnalogListResponse:
       type: object
-      description: Composite cross-reference response — manufacturers, products, analog links, and messages.
+      description: |
+        Composite cross-reference response — manufacturers, products, analog
+        links, and messages. `mfi` + `.` + `ns` identifies a part exactly;
+        `mfai` + `.` + `nsa` identifies a cross exactly.
       required:
         - manufacturerList
         - productList
@@ -977,6 +1303,393 @@ components:
         d:
           type: string
           description: Part description.
+
+    OemRow:
+      type: object
+      description: Original number row — the `CatalogProductRow` shape plus a fitment caveat.
+      required:
+        - mfd
+        - ns
+        - n
+        - d
+      properties:
+        mfi:
+          type: integer
+          description: Manufacturer index in FAPI. Absent when the brand is unknown to FAPI — the row is returned anyway.
+          example: 11822
+        mfd:
+          type: string
+          description: Brand the number is published under.
+          example: TOYOTA
+        ns:
+          type: string
+          description: Standardised number — stable; match on this one.
+          example: "4420012750"
+        n:
+          type: string
+          description: Number as the maker publishes it.
+          example: "44200-12750"
+        d:
+          type: string
+          description: Part description.
+        fit:
+          type: string
+          description: |
+            Present only when none of the links to this number is a direct
+            replacement: `kitPart` — an element of a kit; `component` — one
+            component, not the whole part; `fewerParts` / `moreParts` — the
+            supply is smaller / larger than the original set; `needsFitting` —
+            replaceable with fitting; `checkVehicle` — check the exact vehicle;
+            `separateSupply` — replaceable, supplied separately. The list is
+            closed and will not change without notice.
+          enum:
+            - kitPart
+            - component
+            - fewerParts
+            - moreParts
+            - needsFitting
+            - checkVehicle
+            - separateSupply
+
+    VinResponse:
+      type: object
+      additionalProperties: true
+      description: |
+        The vehicle a VIN decodes to, exactly as the VIN decoder describes it.
+        The decoder owns this object: a field may be added without notice, so
+        read the ones you need and ignore the rest. Optional fields are
+        omitted when the decoder knows no value.
+      required:
+        - vin
+        - country
+        - manufacturer
+        - model_year
+        - confidence
+      properties:
+        vin:
+          type: string
+          example: WVWZZZ1KZ9W123456
+        country:
+          type: string
+          description: Country of manufacture, by the VIN's first three characters.
+        manufacturer:
+          type: string
+          description: Manufacturer, by the VIN's first three characters.
+        brand_name:
+          type: string
+          example: VW
+        model_name:
+          type: string
+          example: GOLF VI (5K1)
+        modification_name:
+          type: string
+          example: 1.4 TSI
+        model_year:
+          type: integer
+          description: Model year from the VIN's 10th character; 0 when it cannot be read.
+          example: 2009
+        production_start:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: First month the modification was produced, `YYYY-MM`.
+          example: "2008-10"
+        production_end:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: Last month the modification was produced, `YYYY-MM`; absent while it is still in production.
+          example: "2012-11"
+        body_type:
+          type: string
+          example: hatchback
+        engine_code:
+          type: string
+          example: CAXA
+        engine_type:
+          type: string
+          description: Engine type, in Russian.
+          example: Бензиновый двигатель
+        fuel_type:
+          type: string
+          example: petrol
+        drive_type:
+          type: string
+          example: FWD
+        displacement_cc:
+          type: integer
+          example: 1390
+        power_kw:
+          type: integer
+          example: 90
+        power_hp:
+          type: integer
+          description: Power in metric horsepower.
+          example: 122
+        transmission:
+          type: string
+          example: manual
+        production_date:
+          type: string
+          format: date
+          description: Date the vehicle was built.
+        engine_number:
+          type: string
+          description: Serial number of the engine (not the engine code).
+        body_color:
+          type: string
+          description: The maker's body paint code, as is.
+        interior_color:
+          type: string
+          description: The maker's interior trim code, as is.
+        tecdoc_manufacturer_id:
+          type: integer
+          description: Catalog manufacturer id; absent when not matched.
+          example: 121
+        tecdoc_model_id:
+          type: integer
+          description: Catalog model id; absent when not matched.
+          example: 7873
+        tecdoc_type_id:
+          type: integer
+          description: |
+            Catalog modification key; absent when not matched. Pass it to
+            `/productApplicabilityList` and `/catalogList/dt/*`.
+          example: 29992
+        tecdoc_card:
+          $ref: '#/components/schemas/VinCatalogCard'
+        confidence:
+          type: string
+          enum: [exact, partial, brand_only, unknown]
+          description: |
+            How far the vehicle was identified: `exact` — down to the
+            modification; `partial` — model; `brand_only` — make only;
+            `unknown` — nothing.
+
+    VinCatalogCard:
+      type: object
+      description: |
+        What the vehicle catalog says about the matched ids. A level is
+        present only when its id was matched; a value the catalog leaves
+        empty is omitted. Absent when nothing was matched, or when the
+        catalog could not be read — the catalog ids alongside it may still be
+        there.
+      properties:
+        manufacturer:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+              example: 121
+            name:
+              type: string
+              example: VW
+        model:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+              example: 7873
+            manufacturer_id:
+              type: integer
+            name:
+              type: string
+              example: GOLF VI (5K1)
+            from:
+              type: integer
+              description: Production start, YYYYMM.
+              example: 200810
+            to:
+              type: integer
+              description: Production end, YYYYMM.
+              example: 201412
+        type:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+              description: Modification key.
+              example: 29992
+            model_id:
+              type: integer
+            name:
+              type: string
+              example: 1.4 TSI
+            from:
+              type: integer
+              description: Production start, YYYYMM.
+            to:
+              type: integer
+              description: Production end, YYYYMM.
+            kw:
+              type: integer
+              example: 90
+            ps:
+              type: integer
+              example: 122
+            lit:
+              type: integer
+              description: Displacement in litres × 100.
+              example: 140
+            engine_type:
+              type: string
+            drive_type:
+              type: string
+            body_type:
+              type: string
+            engine_code:
+              type: string
+              example: CAXA
+
+    VinBalanceResponse:
+      type: object
+      description: The caller's own prepaid balance for VIN decoding, as the VIN decoder reports it.
+      required:
+        - balance_kopecks
+        - lots
+      properties:
+        balance_kopecks:
+          type: integer
+          format: int64
+          description: Total spendable balance, in kopecks — the sum of all live lots below.
+          example: 155000
+        lots:
+          type: array
+          description: Live credits behind the total, in the order they will be spent.
+          items:
+            $ref: '#/components/schemas/VinBalanceLot'
+
+    VinBalanceLot:
+      type: object
+      required:
+        - tariff
+        - remaining_kopecks
+        - expires_at
+      properties:
+        tariff:
+          type: string
+          description: The tariff this lot was credited under.
+          example: pack2000
+        remaining_kopecks:
+          type: integer
+          format: int64
+          description: What is left of this lot, in kopecks.
+          example: 150000
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When this lot stops counting; null when it never expires.
+
+    UsageResponse:
+      type: object
+      required:
+        - account
+      properties:
+        account:
+          $ref: '#/components/schemas/UsageAccount'
+
+    UsageAccount:
+      type: object
+      description: |
+        Your own billing position at `ts`. Money is integer kopecks throughout; credits are
+        whole numbers. Without a plan in force (no billing account yet, or one not started)
+        only `ts`, `st` and `d` are present. With a plan, `ts st pl ps fee u pr b bp` are
+        always present and `0` is a real value — a ceiling's absence is `inc` and `rem` being
+        absent, never `0` standing in for "unlimited".
+      required:
+        - ts
+        - st
+      properties:
+        ts:
+          type: string
+          format: date-time
+          description: The snapshot's own moment — every other field here is at least this fresh.
+          example: "2026-10-15T10:00:00+03:00"
+        st:
+          type: string
+          enum: [unbilled, allowed, denied_unpaid, denied_quota, denied_balance]
+          description: The gate's verdict right now, were a priced request made this instant.
+          example: allowed
+        ac:
+          type: string
+          enum: [top_up, change_plan]
+          description: Present only when `st` is a denial — what would clear it.
+          example: top_up
+        d:
+          type: string
+          description: |
+            Russian, for a partner to read. On a denial, the exact words the `402` itself
+            would carry; with no plan in force, why nothing is charged. Absent otherwise.
+          example: "пакет запросов исчерпан, а тариф не продаёт запросы сверх пакета; смените тариф: https://fapi.iisis.ru/pay/prodlenie-dostupa-k-api-fapi"
+        ob:
+          type: boolean
+          description: |
+            Present only while this node observes rather than enforces, alongside a plan:
+            `true` means a denial above is announced and not yet applied — the request it
+            describes is still served.
+          example: true
+        pl:
+          type: string
+          description: Plan code, present once a plan is in force.
+          example: trial
+        ps:
+          type: string
+          format: date-time
+          description: Start of the current period (for a plan granted once, when it began).
+          example: "2026-09-25T00:00:00+03:00"
+        pe:
+          type: string
+          format: date-time
+          description: |
+            When the next period starts (exclusive). Absent for a plan granted once with no
+            renewal (a trial).
+          example: "2026-11-01T00:00:00+03:00"
+        fee:
+          type: integer
+          format: int64
+          description: Subscription fee per period, in kopecks; `0` = no fee.
+          example: 50000
+        fp:
+          type: boolean
+          description: |
+            Present only when `fee` is more than `0`. `false` together with `st: allowed`
+            means the fee is pending: covered by the balance and already served, posted to
+            the ledger at the next settlement run rather than there already.
+          example: true
+        inc:
+          type: integer
+          format: int64
+          description: The plan's package, in credits. Absent when the plan has no ceiling.
+          example: 100
+        u:
+          type: integer
+          format: int64
+          description: Credits used in the current period, as the gate's own estimate.
+          example: 70
+        rem:
+          type: integer
+          format: int64
+          description: Package credits left; present only alongside `inc`.
+          example: 30
+        pr:
+          type: integer
+          format: int64
+          description: Price of one credit beyond the package, in kopecks; `0` = overage is not sold.
+          example: 2
+        b:
+          type: integer
+          format: int64
+          description: Posted balance, in kopecks — the sum of the ledger.
+          example: 100000
+        bp:
+          type: integer
+          format: int64
+          description: |
+            Balance available to spend: `b` minus a pending fee and overage already spent but
+            not yet posted. Never negative.
+          example: 100000
 
     MessageList:
       type: object
