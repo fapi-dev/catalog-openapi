@@ -27,7 +27,7 @@ info:
     The demo key is shared and rotated periodically — fine for evaluation, not
     for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "3.0.0"
+  version: "4.0.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -1322,6 +1322,12 @@ components:
         The decoder owns this object: a field may be added without notice, so
         read the ones you need and ignore the rest. Optional fields are
         omitted when the decoder knows no value.
+
+        `country` is an ISO 3166-1 alpha-2 code. `body_type`, `drive_type`,
+        `transmission`, `fuel_type`, `engine_type` and `steering` are codes of
+        the closed sets listed below, the same in every language: translate
+        them for your screen. A value the decoder cannot reduce to a code is
+        omitted, never passed through as text.
       required:
         - vin
         - country
@@ -1334,7 +1340,11 @@ components:
           example: WVWZZZ1KZ9W123456
         country:
           type: string
-          description: Country of manufacture, by the VIN's first three characters.
+          pattern: '^([A-Z]{2})?$'
+          description: |
+            Country of manufacture by the VIN's first three characters, as an
+            ISO 3166-1 alpha-2 code; an empty string when it is not known.
+          example: DE
         manufacturer:
           type: string
           description: Manufacturer, by the VIN's first three characters.
@@ -1343,6 +1353,12 @@ components:
           example: VW
         model_name:
           type: string
+          description: |
+            The model's name for the market of the car's country of
+            manufacture, when the catalog names the model for that market;
+            otherwise the name most markets share. The catalog may keep one
+            model under several names, one per market, so this can differ from
+            `dt_card.model.name`, the catalog's own name for every market.
           example: GOLF VI (5K1)
         modification_name:
           type: string
@@ -1363,19 +1379,37 @@ components:
           example: "2012-11"
         body_type:
           type: string
+          enum: [sedan, hatchback, wagon, coupe, hardtop, convertible, targa, suv, pickup, van, minivan, bus, chassis, motorcycle]
           example: hatchback
+        doors:
+          type: integer
+          description: Number of doors.
+          example: 5
+        steering:
+          type: string
+          enum: [LHD, RHD]
+          description: Left-hand or right-hand drive.
+          example: LHD
         engine_code:
           type: string
+          description: The engine code read for this VIN.
           example: CAXA
         engine_type:
           type: string
-          description: Engine type, in Russian.
-          example: Бензиновый двигатель
+          enum: [petrol, diesel, electric, hybrid, full_hybrid, mild_hybrid, plugin_hybrid, range_extender, wankel]
+          description: How the engine works.
+          example: petrol
         fuel_type:
           type: string
+          enum: [petrol, diesel, electric, hybrid, diesel_hybrid, lpg, cng, petrol_lpg, petrol_cng, hydrogen, ethanol, flexfuel]
+          description: |
+            `hybrid` — petrol and electric; `diesel_hybrid` — diesel and
+            electric; `petrol_lpg`, `petrol_cng` — a factory bi-fuel car;
+            `flexfuel` — petrol or ethanol.
           example: petrol
         drive_type:
           type: string
+          enum: [FWD, RWD, AWD]
           example: FWD
         displacement_cc:
           type: integer
@@ -1389,7 +1423,20 @@ components:
           example: 122
         transmission:
           type: string
+          enum: [manual, automatic, cvt, dct, amt]
+          description: |
+            `manual`; `automatic` — a torque-converter automatic; `cvt` —
+            stepless; `dct` — dual-clutch; `amt` — a manual gearbox shifted by
+            a robot.
           example: manual
+        gearbox_code:
+          type: string
+          description: The maker's gearbox code, as read for this VIN.
+          example: SGR
+        gears:
+          type: integer
+          description: Number of forward gears.
+          example: 6
         production_date:
           type: string
           format: date
@@ -1434,7 +1481,9 @@ components:
         present only when its id was matched; a value the catalog leaves
         empty is omitted. Absent when nothing was matched, or when the
         catalog could not be read — the catalog ids alongside it may still be
-        there.
+        there. Its text is the catalog's own: `type.engine_type`,
+        `type.drive_type` and `type.body_type` are the catalog's words in
+        Russian, not the codes of the fields of the same names above.
       properties:
         manufacturer:
           type: object
