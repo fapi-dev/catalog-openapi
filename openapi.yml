@@ -8,8 +8,7 @@ info:
 
     ## Authorization
 
-    Every endpoint except `/imageList` requires an API key in the
-    `Authorization` header:
+    Every endpoint requires an API key in the `Authorization` header:
 
     ```
     Authorization: Bearer <key>
@@ -28,7 +27,7 @@ info:
     The demo key is shared and rotated periodically — fine for evaluation, not
     for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "2.0.0"
+  version: "3.0.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -60,11 +59,7 @@ paths:
       tags:
         - productList
       summary: Get a part image
-      description: Returns a JPEG image of the part. This endpoint is served from a dedicated static host and does not require authentication.
-      security: []
-      servers:
-        - url: https://static.fapi.iisis.ru/fapi/v2
-          description: Static image host
+      description: Returns a JPEG image of the part. When the part has no image, `imgd` decides between a placeholder image and `404`.
       parameters:
         - in: query
           name: mfi
@@ -96,7 +91,7 @@ paths:
             default: 200
       responses:
         '200':
-          description: JPEG image bytes.
+          description: JPEG image bytes — the part's image, or the placeholder when it has none and `imgd` is not false.
           content:
             image/jpeg:
               schema:
@@ -104,8 +99,16 @@ paths:
                 format: binary
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          description: Image not found (only when imgd=false).
+          description: The part has no image (only when imgd=false).
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /manufacturerList:
     get:
@@ -629,8 +632,10 @@ paths:
           description: |
             Your account's prepaid balance for VIN decoding is exhausted
             (`i=15`, code `balance_exhausted`). Top up the balance —
-            retrying will not help. Not charged: a 402 is refused before
-            decoding runs.
+            retrying will not help. Or `i=22`: VIN decoding is not part of
+            the trial, and your account is on it — choose a plan; the message
+            links the payment page. Not charged either way: a 402 is refused
+            before decoding runs.
           content:
             application/json:
               schema:
@@ -1592,7 +1597,7 @@ components:
           description: |
             Russian, for a partner to read. On a denial, the exact words the `402` itself
             would carry; with no plan in force, why nothing is charged. Absent otherwise.
-          example: "пакет запросов исчерпан, а тариф не продаёт запросы сверх пакета; смените тариф: https://fapi.iisis.ru/pay/prodlenie-dostupa-k-api-fapi"
+          example: "пакет запросов исчерпан, а тариф не продаёт запросы сверх пакета; смените тариф: https://fapi.iisis.ru/pay/pay-type-list"
         ob:
           type: boolean
           description: |
