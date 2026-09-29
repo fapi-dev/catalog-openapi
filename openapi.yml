@@ -27,7 +27,7 @@ info:
     The demo key is shared and rotated periodically — fine for evaluation, not
     for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.1.0"
+  version: "4.2.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -213,8 +213,10 @@ paths:
       summary: Find parts by barcode
       description: |
         Returns the parts a barcode on a part's box identifies, in the same composite
-        object as `/productList`. One code may identify several parts — the same product
-        sold under several brands — and all of them are returned.
+        object as `/productList`, after the code as it was read (`barcode`: its digits, its
+        format and its 14-digit GTIN). One code may identify several parts — the same product
+        sold under several brands — and all of them are returned. The other way round, the
+        barcodes of a part, is `/productBarcodeList`.
 
         EAN-13, EAN-8, UPC-A and GTIN-14 are one number written in different widths and are
         read as such: a UPC-A finds the part listed under its EAN-13. Spaces are ignored. A
@@ -242,6 +244,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BarcodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          description: The lookup failed on the server; the body is empty. Not charged.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /productBarcodeList:
+    get:
+      tags:
+        - productList
+      summary: Get the barcodes of a part
+      description: |
+        Returns the barcodes of a part given by its manufacturer and article number —
+        EAN-13, EAN-8, UPC-A or GTIN-14, each with its format and its 14-digit GTIN.
+
+        Only codes that lead back to the part are returned: looking any of them up with
+        `/barcodeList` finds this part. A part may have several codes (different package
+        sizes, a code replaced over the years); the most reliable come first.
+
+        Charged at this method's price when the part has codes; a part without codes is
+        charged as an empty answer; a `400` is not charged.
+      parameters:
+        - in: query
+          name: mfi
+          description: Manufacturer index (see `/manufacturerList`).
+          required: true
+          schema:
+            type: integer
+            default: 11632
+        - in: query
+          name: n
+          description: Part article number, in any spelling — spaces and punctuation are ignored.
+          required: true
+          schema:
+            type: string
+            default: "66235"
+      responses:
+        '200':
+          description: OK — the part's codes; an empty list when it has none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductBarcodeListResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -957,14 +1009,18 @@ components:
     BarcodeListResponse:
       type: object
       description: |
-        The shape of `AnalogListResponse`: manufacturers and the parts a barcode identifies.
-        `analogList` is always empty — ask `/analogList` for a part's cross-references.
+        The code as it was read, then the shape of `AnalogListResponse`: manufacturers and
+        the parts the barcode identifies. `analogList` is always empty — ask `/analogList`
+        for a part's cross-references.
       required:
+        - barcode
         - manufacturerList
         - productList
         - analogList
         - messageList
       properties:
+        barcode:
+          $ref: '#/components/schemas/BarcodeRow'
         manufacturerList:
           $ref: '#/components/schemas/ManufacturerList'
         productList:
@@ -978,6 +1034,48 @@ components:
                 $ref: '#/components/schemas/BarcodeProductRow'
         analogList:
           $ref: '#/components/schemas/AnalogList'
+        messageList:
+          $ref: '#/components/schemas/MessageList'
+
+    BarcodeRow:
+      type: object
+      description: A barcode, written the way its format writes it.
+      required:
+        - c
+        - tp
+        - gtin
+      properties:
+        c:
+          type: string
+          description: The digits, as the format writes them.
+          example: "4019064140399"
+        tp:
+          type: string
+          enum: [EAN-13, EAN-8, UPC-A, GTIN-14]
+          description: |
+            The format. It is a property of the number itself, not of how it was typed: a
+            UPC-A typed as a 13-digit EAN is a UPC-A.
+        gtin:
+          type: string
+          description: The 14-digit GTIN — one key for every format, the form to keep and compare.
+          example: "04019064140399"
+
+    ProductBarcodeListResponse:
+      type: object
+      description: The barcodes of a part, the most reliable first.
+      required:
+        - barcodeList
+        - messageList
+      properties:
+        barcodeList:
+          type: object
+          required:
+            - b
+          properties:
+            b:
+              type: array
+              items:
+                $ref: '#/components/schemas/BarcodeRow'
         messageList:
           $ref: '#/components/schemas/MessageList'
 
