@@ -27,7 +27,7 @@ info:
     The demo key is shared and rotated periodically — fine for evaluation, not
     for production load. Production access requires a permanent key — contact
     `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.2.0"
+  version: "4.3.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -698,6 +698,11 @@ paths:
         also be refused over your account's balance there rather than your
         key — see the `402` and `503` responses below — and never billed
         when it is: `vin` in `GET /usage` shows that balance.
+
+        The answer's codes are the same in every language. Pass `lang` to
+        get, next to them, `labels` — each code's name in that language — and
+        `model_name` and `modification_name` in it. Without `lang` the answer
+        is exactly what it was before the parameter existed.
       parameters:
         - in: query
           name: vin
@@ -708,6 +713,21 @@ paths:
             minLength: 17
             maxLength: 17
             default: XWF0AHL30D0011102
+        - in: query
+          name: lang
+          description: |
+            Language to answer in: an ISO 639-1 code the vehicle catalog
+            holds (`ru`, `en`, `tr`, `de`, `fr`, `es`, … — 43 languages),
+            case-insensitive. Adds `labels` and names the model and the
+            modification in that language; the codes and `dt_card` never
+            change with it. A language the catalog does not hold is a 400,
+            never an answer in another language.
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+            example: tr
       responses:
         '200':
           description: OK
@@ -716,7 +736,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/VinResponse'
         '400':
-          description: VIN missing or not ISO 3779, or VIN decoding is not configured on this host. Empty body.
+          description: |
+            VIN missing or not ISO 3779, or VIN decoding is not configured on
+            this host: an empty body. Or `lang` names a language the vehicle
+            catalog does not hold: `i=15`, code `lang_unsupported`, with the
+            decoder's own sentence. Refused before decoding runs, so never
+            charged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
         '401':
           description: No key, an expired key, or `i=15` — the VIN decoder refused the key as expired.
           content:
@@ -733,10 +762,11 @@ paths:
           description: |
             Your account's prepaid balance for VIN decoding is exhausted
             (`i=15`, code `balance_exhausted`). Top up the balance —
-            retrying will not help. Or `i=22`: VIN decoding is not part of
-            the trial, and your account is on it — choose a plan; the message
-            links the payment page. Not charged either way: a 402 is refused
-            before decoding runs.
+            retrying will not help. That balance alone decides it: no plan
+            of this API opens or closes VIN decoding, the trial included
+            (`i=22`, answered to a trial account until 2026-10-02, is
+            retired and never reused). Not charged: a 402 is refused before
+            decoding runs.
           content:
             application/json:
               schema:
@@ -1538,8 +1568,9 @@ components:
         `country` is an ISO 3166-1 alpha-2 code. `body_type`, `drive_type`,
         `transmission`, `fuel_type`, `engine_type` and `steering` are codes of
         the closed sets listed below, the same in every language: translate
-        them for your screen. A value the decoder cannot reduce to a code is
-        omitted, never passed through as text.
+        them for your screen, or pass `lang` and read `labels`. A value the
+        decoder cannot reduce to a code is omitted, never passed through as
+        text.
       required:
         - vin
         - country
@@ -1571,9 +1602,12 @@ components:
             otherwise the name most markets share. The catalog may keep one
             model under several names, one per market, so this can differ from
             `dt_card.model.name`, the catalog's own name for every market.
+            With `lang`: that same market's name in the language; where the
+            catalog has none in it, in English; otherwise as without `lang`.
           example: GOLF VI (5K1)
         modification_name:
           type: string
+          description: With `lang`, in that language by the same rule as `model_name`.
           example: 1.4 TSI
         model_year:
           type: integer
@@ -1678,6 +1712,35 @@ components:
           example: 29992
         dt_card:
           $ref: '#/components/schemas/VinCatalogCard'
+        labels:
+          type: object
+          additionalProperties: true
+          description: |
+            Present only when the request named a `lang`: for each of the six
+            coded fields the answer has, that code's name in the language. A
+            code the catalog has no text for in the language is named in
+            English; with none in English either, its key is absent. The
+            wording of a label may be improved without notice — compare and
+            filter by the codes, show the labels.
+          properties:
+            country:
+              type: string
+              example: Rusya
+            body_type:
+              type: string
+              example: Sedan
+            drive_type:
+              type: string
+              example: Önden tahrik
+            transmission:
+              type: string
+              example: Mekanik şanzıman
+            fuel_type:
+              type: string
+              example: Benzin
+            engine_type:
+              type: string
+              example: Benzinli motor
         confidence:
           type: string
           enum: [exact, partial, brand_only, unknown]
