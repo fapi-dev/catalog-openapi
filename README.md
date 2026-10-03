@@ -27,7 +27,7 @@ A public demo key is rotated periodically — fetch the current value from:
 curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
 ```
 
-Send it in the `Authorization` header on any endpoint:
+Send it in the `Authorization` header on any endpoint except `/vin`:
 
 ```bash
 KEY=$(curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt)
@@ -35,6 +35,8 @@ curl -H "Authorization: Bearer $KEY" "https://fapi.iisis.ru/fapi/v2/analogList?n
 ```
 
 The demo key is shared and rotated periodically — fine for evaluation, not for production load.
+It does not open VIN decoding: `GET /vin` answers it with a `403` (`i=15`, `unknown_key`).
+Decoding is billed to an account's own prepaid balance and needs a personal key.
 
 ## Getting a permanent key
 
