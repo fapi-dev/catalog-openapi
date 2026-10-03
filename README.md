@@ -19,31 +19,22 @@ OEM cross-reference database for auto parts:
 - **Vehicle catalog (`catalogDt`)** — parts lookup by vehicle make / model / modification / node: aftermarket parts (`productList`) and the maker's original numbers (`productListOEM`).
 - **VIN (`vin`)** — identify a vehicle by VIN and continue in the vehicle catalog with the modification it resolved to.
 
-## Try it now (demo key)
+## Getting a key
 
-A public demo key is rotated periodically — fetch the current value from:
+Register at **[id.iisis.ru](https://id.iisis.ru)** and issue a key for this API on the "Keys"
+page of your account. A new account starts on a trial package of credits, granted once.
 
-```
-curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
-```
-
-Send it in the `Authorization` header on any endpoint except `/vin`:
+Send the key in the `Authorization` header:
 
 ```bash
-KEY=$(curl -s https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt)
+KEY=<your key>
 curl -H "Authorization: Bearer $KEY" "https://fapi.iisis.ru/fapi/v2/analogList?n=w753"
 ```
 
-The demo key is shared and rotated periodically — fine for evaluation, not for production load.
-It does not open VIN decoding: `GET /vin` answers it with a `403` (`i=15`, `unknown_key`).
-Decoding is billed to an account's own prepaid balance and needs a personal key.
+Never put a key in a URL — URLs end up in access logs and proxies. VIN decoding (`/vin`) is
+billed to a prepaid balance of its own, not to the trial package.
 
-## Getting a permanent key
-
-Production access requires a personal API key. Contact **`development.iisis@gmail.com`** or visit **[fapi.iisis.ru](https://fapi.iisis.ru)**.
-
-A personal key goes in the same `Authorization: Bearer` header. Never put a key in a URL — URLs
-end up in access logs and proxies.
+Questions — **`development.iisis@gmail.com`** or **[fapi.iisis.ru](https://fapi.iisis.ru)**.
 
 ## About this repository
 

@@ -18,19 +18,15 @@ info:
     every proxy on the way. A refusal carries a `MessageList` whose `i` tells
     which check refused (see the 401, 403 and 503 responses).
 
-    ## Trying the API
+    ## Getting a key
 
-    For evaluation, a **public demo key** is available at:
-
-    https://gist.githubusercontent.com/serp83/652d191745773ef6d8b5a0a689479cd6/raw/demo-key.txt
-
-    The demo key is shared and rotated periodically — fine for evaluation, not
-    for production load. It opens every endpoint except VIN decoding:
-    `GET /vin` answers it with a 403 (`i=15`, `unknown_key`), because decoding
-    is billed to an account's own prepaid balance and needs a personal key.
-    Production access requires a permanent key — contact
-    `development.iisis@gmail.com` or see [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.3.1"
+    Register at [id.iisis.ru](https://id.iisis.ru) and issue a key for this
+    API on the "Keys" page of your account. A new account starts on a trial
+    package of credits, granted once; `GET /usage` shows what is left of it.
+    VIN decoding (`GET /vin`) is not part of the package: it is billed to a
+    prepaid balance of its own. Questions — `development.iisis@gmail.com` or
+    [fapi.iisis.ru](https://fapi.iisis.ru).
+  version: "4.4.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -697,8 +693,7 @@ paths:
         Your key must open VIN decoding as well as this API: it is presented
         to the VIN decoder on your behalf, and decoding is billed to you there.
         A key that does not is refused with `i=15` and the decoder's own code
-        (`unknown_key`, `key_expired`, `identity_unavailable`). The public
-        demo key is such a key: it never decodes a VIN. Decoding may
+        (`unknown_key`, `key_expired`, `identity_unavailable`). Decoding may
         also be refused over your account's balance there rather than your
         key — see the `402` and `503` responses below — and never billed
         when it is: `vin` in `GET /usage` shows that balance.
