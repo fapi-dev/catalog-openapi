@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.4.0"
+  version: "4.6.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -615,11 +615,25 @@ paths:
       description: |
         The vehicle maker's original numbers for a (node, modification) pair —
         the counterpart of `/catalogList/dt/productList`, which returns the
-        aftermarket parts for the same pair. Rows are not ranked: they come by
-        brand, then by number. Match on `ns`; the spelling in `n` comes from the
-        source and may differ between answers. `[]` means the node has no
-        originals — a normal answer. Send `Accept-Encoding: gzip`: answers reach
-        hundreds of kilobytes and compress about eightfold.
+        aftermarket parts for the same pair. Match on `ns`; the spelling in `n`
+        comes from the source and may differ between answers. `[]` means the
+        node has no originals — a normal answer. Send `Accept-Encoding: gzip`:
+        answers reach hundreds of kilobytes and compress about eightfold.
+
+        The answer is the modification's, not one car's. It lists every
+        original number the aftermarket parts fitted to this modification
+        replace, so it knows neither the side of installation, nor the factory
+        options, nor the build date inside the modification's production
+        years: a node may return several numbers where the maker's own parts
+        catalog shows one for a given VIN — a left and a right part, or two
+        spellings of one number. Decoding a VIN narrows the vehicle down to
+        the modification and no further; where a part has such variants,
+        confirm the number to order in the maker's catalog.
+
+        Rows come brand by brand, the vehicle's own first, and inside a brand
+        the most widely confirmed number first (`sources`), equal ones by
+        number. The order says how well established a number is, not which of
+        them fits a particular car.
       parameters:
         - in: query
           name: modi
@@ -686,9 +700,11 @@ paths:
         Decodes a VIN into one vehicle. The answer is the VIN decoder's own,
         relayed unchanged: its fields are listed below as they are today, and
         the decoder may add fields at any time — ignore the ones you do not
-        know. `dt_type_id` goes straight into `/productApplicabilityList`
-        and `/catalogList/dt/*`. `confidence` says how deep the vehicle was
-        identified; a VIN nothing is known about is still a 200.
+        know. `dt_type_id` is the modification key of the catalogue routes:
+        `mi` of `/catalogList/dt/treeList`, `modi` of
+        `/catalogList/dt/productList` and `/catalogList/dt/productListOEM`.
+        `confidence` says how deep the vehicle was identified; a VIN nothing
+        is known about is still a 200.
 
         Your key must open VIN decoding as well as this API: it is presented
         to the VIN decoder on your behalf, and decoding is billed to you there.
@@ -1510,7 +1526,10 @@ components:
 
     OemRow:
       type: object
-      description: Original number row — the `CatalogProductRow` shape plus a fitment caveat.
+      description: |
+        Original number row — the `CatalogProductRow` shape plus what only this
+        route knows about a number: a fitment caveat and how many data
+        suppliers stand behind it.
       required:
         - mfd
         - ns
@@ -1554,6 +1573,18 @@ components:
             - needsFitting
             - checkVehicle
             - separateSupply
+        sources:
+          type: integer
+          minimum: 1
+          description: |
+            How many independent data suppliers publish this number as an
+            original of the vehicle's make — or of a platform relative of it,
+            whichever publishes the number wider. The more, the better
+            established the number: a second spelling or a rare variant of a
+            part carries fewer than the number most catalogs know the part by.
+            Rows of one brand come widest first. Absent when the source
+            cannot say, which is not a zero.
+          example: 63
 
     VinResponse:
       type: object
@@ -1707,7 +1738,9 @@ components:
           type: integer
           description: |
             Catalog modification key; absent when not matched. Pass it to
-            `/productApplicabilityList` and `/catalogList/dt/*`.
+            `/catalogList/dt/treeList` as `mi`, and to
+            `/catalogList/dt/productList` and `/catalogList/dt/productListOEM`
+            as `modi`.
           example: 29992
         dt_card:
           $ref: '#/components/schemas/VinCatalogCard'
@@ -1746,7 +1779,10 @@ components:
           description: |
             How far the vehicle was identified: `exact` — down to the
             modification; `partial` — model; `brand_only` — make only;
-            `unknown` — nothing.
+            `unknown` — nothing. `exact` is the depth of the vehicle's
+            identification, not of a part's: the catalog routes answer for
+            the modification, with no side of installation, factory options
+            or build date — see `/catalogList/dt/productListOEM`.
 
     VinCatalogCard:
       type: object
