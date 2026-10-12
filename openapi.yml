@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.6.0"
+  version: "4.7.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -138,7 +138,7 @@ paths:
       tags:
         - productList
       summary: Look up parts by article number
-      description: Returns parts matching the given article number, together with their manufacturers, cross-references, and any messages. The response shape is the same composite object as `/analogList`.
+      description: Returns parts matching the given article number — of every brand, or of one brand when `mfi` is given — together with their manufacturers, cross-references, and any messages. The response shape is the same composite object as `/analogList`.
       parameters:
         - in: query
           name: n
@@ -147,6 +147,12 @@ paths:
           schema:
             type: string
             default: A00742
+        - in: query
+          name: mfi
+          description: Manufacturer index (optional, narrows results to a specific brand).
+          required: false
+          schema:
+            type: integer
         - in: query
           name: comparison
           description: If set, `n` is treated as a search prefix / pattern rather than an exact article number.
