@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.7.0"
+  version: "4.8.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -317,7 +317,14 @@ paths:
       tags:
         - productList
       summary: Get extra attributes of a part
-      description: Returns the list of key/value attributes (weight, dimensions, etc.) attached to a specific part.
+      description: |
+        Returns the list of key/value attributes (weight, dimensions, etc.) attached to a specific part.
+
+        A part the catalog does not hold under this manufacturer is answered with an empty list,
+        like a part without attributes.
+
+        Charged at this method's price when the part has attributes; an empty list is charged
+        as an empty answer; a `400` or a `500` is not charged.
       parameters:
         - in: query
           name: n
@@ -341,13 +348,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/ParameterListResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: |
+            `n` is empty, or `mfi` is missing, not a number or not a known manufacturer
+            (see `/manufacturerList`); the body is empty. Not charged.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '500':
+          description: The lookup failed on the server; the body is empty. Not charged.
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
