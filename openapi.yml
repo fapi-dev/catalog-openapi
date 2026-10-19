@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.8.0"
+  version: "4.9.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -367,18 +367,32 @@ paths:
       tags:
         - productList
       summary: Vehicle applicability for a part
-      description: Returns the vehicles (manufacturer / model / modification) the given part fits.
+      description: |
+        Returns the vehicles (manufacturer / model / modification) the given part fits.
+
+        When `mfi` is the brand of a vehicle manufacturer, `n` is read as that
+        manufacturer's original (OE) number as well: the answer lists the
+        vehicles of that brand which the aftermarket parts cross-referenced to
+        the number fit. Only the brand's own vehicles count — a universal part
+        that also replaces the number does not bring in every other make it
+        fits. A vehicle that a single parts maker alone links to the number is
+        left out once others are confirmed by two or more; a number only one
+        parts maker references keeps all its vehicles.
+
+        A brand that is both a parts maker and a vehicle manufacturer gets both
+        answers in one list, each vehicle once. `[]` lists mean nothing is
+        known — a normal answer.
       parameters:
         - in: query
           name: mfi
-          description: Manufacturer index.
+          description: Manufacturer index — the part's maker, or a vehicle manufacturer to look its original number up.
           required: true
           schema:
             type: integer
             default: 12738
         - in: query
           name: n
-          description: Part article number.
+          description: Part article number, or an original (OE) number of the vehicle manufacturer given in `mfi`.
           required: true
           schema:
             type: string
