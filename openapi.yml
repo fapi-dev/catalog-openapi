@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.9.0"
+  version: "4.10.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -404,6 +404,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CarListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /part:
+    get:
+      tags:
+        - analogList
+      summary: The card of one article
+      description: |
+        The article the way a catalogue shows it: the part and its `status` — `current`, or
+        `replaced` with `current` naming the number at the end of its replacement chain —
+        and its links in blocks: `replacedBy` (the part is discontinued, these replace it),
+        `replaces` (its former numbers), `oe` (original numbers of vehicle manufacturers'
+        brands) and `analogs` (equivalent parts of other brands, best first). Every link
+        carries `rp`/`rm` and `mfc` when the manufacturer itself vouches for it. The same
+        cross-references `/analogList` answers, grouped.
+
+        With `n` alone, a number several brands carry answers `candidates` and no card: ask
+        again with `mfi`. One candidate is answered as its card. Nothing known is
+        `{"candidates": []}`.
+      parameters:
+        - in: query
+          name: n
+          description: Part article number.
+          required: true
+          schema:
+            type: string
+            default: "LRc 0127"
+        - in: query
+          name: mfi
+          description: Manufacturer index — `dbi` of the part's brand, or `mfi` of a candidate.
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: r
+          description: A link is listed when its rating (`rp - rm`) exceeds this. Default 0.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          description: At most this many analogs (the other blocks are whole). Default 200, at most 1000.
+          required: false
+          schema:
+            type: integer
+            default: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartCard'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -997,6 +1060,12 @@ components:
           type: integer
           description: Database index in FAPI (the stable key used to address this manufacturer in other endpoints).
           example: 111
+        oe:
+          type: boolean
+          description: >-
+            Present and `true` when the brand is a vehicle manufacturer: its part numbers are
+            original (OE) numbers, and a cross to one of them is the original, not an analog.
+            Absent for parts brands.
 
     ManufacturerAliasRow:
       type: object
@@ -1011,6 +1080,88 @@ components:
         da:
           type: string
           description: Adapted alias text (upper case, no special characters).
+
+    PartRef:
+      type: object
+      description: One article — a brand's part number.
+      required:
+        - mfi
+        - ds
+        - n
+        - ns
+      properties:
+        mfi:
+          type: integer
+          description: Database index of the brand (`dbi` of `/manufacturerList`).
+        ds:
+          type: string
+          description: Brand name.
+        n:
+          type: string
+          description: Part number as written.
+        ns:
+          type: string
+          description: Standardised part number.
+        d:
+          type: string
+          description: The part's name in the catalog, when it has one.
+        oe:
+          type: boolean
+          description: Present and `true` when the brand is a vehicle manufacturer.
+
+    PartLink:
+      allOf:
+        - $ref: '#/components/schemas/PartRef'
+        - type: object
+          required:
+            - rp
+            - rm
+          properties:
+            rp:
+              type: integer
+              description: Ratings for the link.
+            rm:
+              type: integer
+              description: Ratings against the link.
+            mfc:
+              type: boolean
+              description: Present and `true` when the manufacturer itself vouches for the link.
+
+    PartCard:
+      type: object
+      description: The card of one article, or the candidates a number alone has to be narrowed from.
+      required:
+        - candidates
+      properties:
+        part:
+          $ref: '#/components/schemas/PartRef'
+        status:
+          type: string
+          enum: [current, replaced]
+          description: Whether the part is still the current number or has been replaced.
+        current:
+          $ref: '#/components/schemas/PartRef'
+        replacedBy:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartLink'
+        replaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartLink'
+        oe:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartLink'
+        analogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartLink'
+        candidates:
+          type: array
+          description: The articles the number names; one when the card is answered, several when a brand is needed, none when nothing is known.
+          items:
+            $ref: '#/components/schemas/PartRef'
 
     AnalogListResponse:
       type: object
@@ -1257,6 +1408,22 @@ components:
         nsa:
           type: string
           description: Standardised number of the cross part.
+        rpl:
+          type: boolean
+          description: >-
+            Present and `true` when the cross part supersedes the source part: the source
+            number is discontinued and the cross number is its replacement, said by the
+            manufacturer or by a catalogue. Absent otherwise.
+        prev:
+          type: boolean
+          description: >-
+            Present and `true` when the cross part is a former number of the source part
+            (the mirror of `rpl`). Absent otherwise.
+        mfc:
+          type: boolean
+          description: >-
+            Present and `true` when the manufacturer itself vouches for this cross — one of
+            the positive ratings is the manufacturer's own. Absent otherwise.
 
     ParameterListResponse:
       type: object
