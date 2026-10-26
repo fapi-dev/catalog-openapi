@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.11.0"
+  version: "4.12.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -1486,6 +1486,12 @@ components:
         i:
           type: integer
           description: Index (row id within this response).
+        dbi:
+          type: integer
+          format: int64
+          description: >-
+            Catalog model id — pass it as `mi` to /catalogList/dt/modificationList to get the
+            details (power, capacity, engine code) of this model's modifications.
         mfi:
           type: integer
           description: Manufacturer index — foreign key to ManufacturerListRow.i.
@@ -1520,9 +1526,10 @@ components:
           type: integer
           format: int64
           description: >-
-            Catalog modification id — the same id as `dbi` of a /catalogList/dt/modificationList
-            row, where its power, capacity and engine code are. Several modifications of one
-            model can share a description and a production period; this id tells them apart.
+            Catalog modification id. Several modifications of one model can share a description
+            and a production period; this id tells them apart. Its details are the
+            /catalogList/dt/modificationList row with the same `dbi`, requested with `mi` = the
+            `dbi` of the model this row's `mdi` points to.
         mfi:
           type: integer
           description: Manufacturer index — foreign key to ManufacturerListRow.i.
