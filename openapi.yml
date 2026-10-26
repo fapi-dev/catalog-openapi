@@ -26,7 +26,7 @@ info:
     VIN decoding (`GET /vin`) is not part of the package: it is billed to a
     prepaid balance of its own. Questions — `development.iisis@gmail.com` or
     [fapi.iisis.ru](https://fapi.iisis.ru).
-  version: "4.10.0"
+  version: "4.11.0"
   contact:
     email: development.iisis@gmail.com
   license:
@@ -370,7 +370,7 @@ paths:
       description: |
         Returns the vehicles (manufacturer / model / modification) the given part fits.
 
-        When `mfi` is the brand of a vehicle manufacturer, `n` is read as that
+        When `mfi` is the brand of a passenger-car manufacturer, `n` is read as that
         manufacturer's original (OE) number as well: the answer lists the
         vehicles of that brand which the aftermarket parts cross-referenced to
         the number fit. Only the brand's own vehicles count — a universal part
@@ -1063,9 +1063,10 @@ components:
         oe:
           type: boolean
           description: >-
-            Present and `true` when the brand is a vehicle manufacturer: its part numbers are
-            original (OE) numbers, and a cross to one of them is the original, not an analog.
-            Absent for parts brands.
+            Present and `true` when the brand is a vehicle manufacturer — of cars, trucks,
+            buses, agricultural or construction machinery: its part numbers are original (OE)
+            numbers, and a cross to one of them is the original, not an analog. Absent for
+            parts brands, including a parts brand that shares its name with a vehicle make.
 
     ManufacturerAliasRow:
       type: object
@@ -1515,6 +1516,13 @@ components:
         i:
           type: integer
           description: Index (row id within this response).
+        dbi:
+          type: integer
+          format: int64
+          description: >-
+            Catalog modification id — the same id as `dbi` of a /catalogList/dt/modificationList
+            row, where its power, capacity and engine code are. Several modifications of one
+            model can share a description and a production period; this id tells them apart.
         mfi:
           type: integer
           description: Manufacturer index — foreign key to ManufacturerListRow.i.
@@ -1527,7 +1535,15 @@ components:
         cb:
           type: integer
           format: int64
-          description: Construction begin date, Unix timestamp in milliseconds.
+          description: >-
+            Construction begin, Unix timestamp in milliseconds: the first day of the month
+            production began, at midnight Moscow time.
+        ce:
+          type: integer
+          format: int64
+          description: >-
+            Construction end, Unix timestamp in milliseconds: the first day of the month
+            production ended, at midnight Moscow time. Absent while still in production.
 
     ModelList:
       type: object
