@@ -36,6 +36,21 @@ billed to a prepaid balance of its own, not to the trial package.
 
 Questions — **`development.iisis@gmail.com`** or **[fapi.iisis.ru](https://fapi.iisis.ru)**.
 
+## Use it from an AI assistant (MCP)
+
+The API is also served as a [Model Context Protocol](https://modelcontextprotocol.io)
+endpoint: one tool per method, each billed to your key exactly as its method is.
+
+- Endpoint: `https://fapi.iisis.ru/fapi/mcp` (Streamable HTTP)
+- Authorization: the same key, `Authorization: Bearer <your key>`
+
+```json
+{"mcpServers": {"fapi-catalog": {"type": "http", "url": "https://fapi.iisis.ru/fapi/mcp",
+  "headers": {"Authorization": "Bearer <your key>"}}}}
+```
+
+Asking for your balance (`get_usage`) is free.
+
 ## About this repository
 
 This repository is a publication target: the spec is maintained together with the API itself and
